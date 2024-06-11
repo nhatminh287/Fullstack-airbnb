@@ -1,38 +1,26 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/app/libs/prismadb';
-import bcrypt from 'bcrypt';
 import getCurrentUser from '@/app/actions/getCurrentUser';
+import primsa from '@/app/libs/prismadb';
+import { NextResponse } from 'next/server';
 
-export const POST = async (request: Request) => {
+interface IPararms {
+  listingId?: string;
+}
+
+export const DELETE = async (request: Request, { params }: { params: IPararms }) => {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return NextResponse.error();
   }
 
-  const body = await request.json();
+  const { listingId } = params;
 
-  const { category, location, guestCount, roomCount, bathroomCount, imageSrc, price, title, description } = body;
+  if (!listingId || typeof listingId !== 'string') {
+    throw new Error('Invalid ID');
+  }
 
-  Object.keys(body).forEach((value: any) => {
-    if (!body[value]) {
-      NextResponse.error();
-    }
-  });
-
-  const listing = await prisma.listing.create({
-    data: {
-      title,
-      description,
-      imageSrc,
-      category,
-      roomCount,
-      bathroomCount,
-      guestCount,
-      locationValue: location.value,
-      price: parseInt(price, 10),
-      userId: currentUser.id,
-    },
+  const listing = await primsa.listing.deleteMany({
+    where: { id: listingId, userId: currentUser.id },
   });
 
   return NextResponse.json(listing);
