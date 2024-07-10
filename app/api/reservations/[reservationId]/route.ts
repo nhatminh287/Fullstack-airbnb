@@ -1,35 +1,27 @@
 import getCurrentUser from '@/app/actions/getCurrentUser';
+import primsa from '@/app/libs/prismadb';
 import { NextResponse } from 'next/server';
-import prisma from '@/app/libs/prismadb';
 
-export const POST = async (request: Request) => {
+interface IPararms {
+  reservationId?: string;
+}
+
+export const DELETE = async (request: Request, { params }: { params: IPararms }) => {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return NextResponse.error();
   }
 
-  const body = await request.json();
+  const { reservationId } = params;
 
-  const { listingId, startDate, endDate, totalPrice } = body;
+  if (!reservationId || typeof reservationId !== 'string') {
+    throw new Error('Invalid ID');
+  }
 
-  if (!listingId || !startDate || !endDate || !totalPrice) return NextResponse.error();
-
-  const listingAndReservation = await prisma.listing.update({
-    where: {
-      id: listingId,
-    },
-    data: {
-      reservations: {
-        create: {
-          userId: currentUser.id,
-          startDate,
-          endDate,
-          totalPrice,
-        },
-      },
-    },
+  const reservation = await primsa.reservation.deleteMany({
+    where: { id: reservationId, OR: [{ userId: currentUser.id }, { listing: { userId: currentUser.id } }] },
   });
 
-  return NextResponse.json(listingAndReservation);
+  return NextResponse.json(reservation);
 };
